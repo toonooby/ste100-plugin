@@ -49,6 +49,8 @@ describe() {
   read -r level source <<<"$(resolve)"
   if [[ "$level" == "0" ]]; then
     echo "STE100: off (source: $source)"
+  elif [[ "$level" == "invalid" ]]; then
+    echo "STE100: off, because the level in $source is not valid. Send ste <10-100> or ste off to fix it."
   else
     echo "STE100: ${level}% (source: $source)"
   fi

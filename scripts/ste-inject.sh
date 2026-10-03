@@ -38,8 +38,12 @@ if [[ $input =~ $ste_prompt ]]; then
 fi
 shopt -u nocasematch
 
-read -r LEVEL _ <<<"$("$DIR/ste-level.sh" --resolve)"
+read -r LEVEL SOURCE <<<"$("$DIR/ste-level.sh" --resolve)"
 [[ "$LEVEL" == "0" ]] && exit 0
+if [[ "$LEVEL" == "invalid" ]]; then
+  echo "<ste100-error>The STE100 level setting (${SOURCE}) is not valid, so no STE100 rules apply. Tell the user once that sending \"ste 70\" or \"ste off\" fixes it.</ste100-error>"
+  exit 0
+fi
 
 rule() { (( LEVEL >= $1 )) && echo "- $2"; return 0; }
 
