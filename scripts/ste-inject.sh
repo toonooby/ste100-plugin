@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # UserPromptSubmit hook for Claude Code and Codex.
 #
-# A prompt like "ste 70", "ste off" or "ste status --project" sets the level and
-# is blocked, so it never reaches the model. Codex has no plugin slash commands,
-# so this is how Codex users move the slider. Any other prompt gets the STE100
-# rules for the active level. Rules are cumulative: each level adds rules on top
-# of the levels below it.
+# A prompt like "ste 70", "/ste off" or "ste status --project" sets the level
+# and is blocked, so it never reaches the model. Neither tool registers a plain
+# /ste command for plugins (Codex has no plugin commands; Claude Code namespaces
+# them), and both pass an unknown "/ste 70" through to this hook. Any other
+# prompt gets the STE100 rules for the active level. Rules are cumulative: each
+# level adds rules on top of the levels below it.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -23,10 +24,11 @@ if [[ -z "${CLAUDE_PROJECT_DIR:-}" && $input =~ \"cwd\"[[:space:]]*:[[:space:]]*
 fi
 
 shopt -s nocasematch
-ste_prompt="\"prompt\"[[:space:]]*:[[:space:]]*\"${ws}ste(([[:space:]]+[a-z0-9%]+)?([[:space:]]+--project)?)${ws}\""
+ste_prompt="\"prompt\"[[:space:]]*:[[:space:]]*\"${ws}/?(ste100:)?ste(([[:space:]]+[a-z0-9%]+)?([[:space:]]+--project)?)${ws}\""
 if [[ $input =~ $ste_prompt ]]; then
-  # Group 1 is the leading whitespace inside $ws; group 2 holds the arguments.
-  args="$(printf '%s' "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')"
+  # Group 1 is the leading whitespace inside $ws, group 2 the optional
+  # "ste100:" namespace; group 3 holds the arguments.
+  args="$(printf '%s' "${BASH_REMATCH[3]}" | tr '[:upper:]' '[:lower:]')"
   if [[ $args =~ ^[[:space:]]*(([0-9]{1,3}%?|off|status|clear)([[:space:]]+--project)?)?[[:space:]]*$ ]]; then
     # shellcheck disable=SC2086 # word splitting turns "70 --project" into two args
     msg="$("$DIR/ste-level.sh" $args 2>&1)" || true

@@ -1,6 +1,6 @@
 ---
 name: ste100
-description: Reference for writing or checking text in ASD-STE100 Simplified Technical English at a 10-100% compliance level. Use when the user asks for STE, Simplified Technical English, STE100, simpler technical prose, or a compliance check or rewrite of documentation, procedures, or replies.
+description: Reference for writing or checking text in ASD-STE100 Simplified Technical English at a 10-100% compliance level. Use when the user asks for STE, Simplified Technical English, STE100, simpler technical prose, or a compliance check or rewrite of documentation, procedures, or replies. Also use when the user sends a level message such as "ste 70" or "/ste 70": reaching you means the plugin's hook did not run.
 ---
 
 # ASD-STE100 writing at graded compliance
@@ -9,7 +9,14 @@ ASD-STE100 is a controlled language for technical documentation. It limits vocab
 
 ## The slider
 
-The plugin maps a level from 10% to 100% onto cumulative rule tiers. The user sets the level by sending `ste <level>` as a message (or `/ste <level>` in Claude Code), and a hook adds the rules for that level to each turn.
+The plugin maps a level from 10% to 100% onto cumulative rule tiers. The user sets the level by sending `ste <level>` or `/ste <level>` as a message, and a hook adds the rules for that level to each turn.
+
+### If a level message reaches you
+
+The hook normally catches `ste 70`, `/ste off`, and similar messages before they reach the model. If one reaches you, the hook did not run, so no STE rules are being applied either. Do not set the level yourself; that would hide the problem.
+
+- In Codex, the usual cause is that plugin hooks stay off until the user trusts them. Tell the user to run `/hooks`, trust the ste100 hook, and send the message again.
+- In Claude Code, the usual cause is that the plugin is disabled or the session started before it was installed. Tell the user to check `/plugin` and start a new session.
 
 | Level | Adds |
 |-------|------|

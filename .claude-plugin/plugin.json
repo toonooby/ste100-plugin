@@ -1,6 +1,6 @@
 {
   "name": "ste100",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Write replies in ASD-STE100 Simplified Technical English in Claude Code and Codex, with a 10-100% strictness slider and a rule that accuracy always beats compliance.",
   "author": {
     "name": "toonooby"

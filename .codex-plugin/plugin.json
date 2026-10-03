@@ -1,6 +1,6 @@
 {
   "name": "ste100",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Write replies in ASD-STE100 Simplified Technical English, with a 10-100% strictness slider and a rule that accuracy always beats compliance.",
   "author": {
     "name": "toonooby"
@@ -8,7 +8,12 @@
   "homepage": "https://github.com/toonooby/ste100-plugin",
   "repository": "https://github.com/toonooby/ste100-plugin",
   "license": "MIT",
-  "keywords": ["ste100", "simplified-technical-english", "writing", "style"],
+  "keywords": [
+    "ste100",
+    "simplified-technical-english",
+    "writing",
+    "style"
+  ],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "interface": {

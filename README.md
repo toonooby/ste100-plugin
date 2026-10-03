@@ -20,11 +20,11 @@ codex plugin marketplace add toonooby/ste100-plugin
 codex plugin add ste100@ste100-marketplace
 ```
 
-Then start a new session and run `/hooks` to trust the ste100 hook. Codex skips plugin hooks until you trust them, and the hook is what applies the rules.
+Then start a new session and **run `/hooks` to trust the ste100 hook.** Codex skips plugin hooks until you trust them, and the hook is what applies the rules. Until you do, `ste 70` goes to the model as a normal message and replies do not change.
 
 ## Use
 
-The plugin does nothing until you set a level. Send one of these as a message. The hook handles it, and it does not go to the model.
+The plugin does nothing until you set a level. Send one of these as a message, with or without a leading slash (`ste 70` or `/ste 70`). The hook handles it and replies with a one-line confirmation; the message does not go to the model.
 
 | Message | Effect |
 |---------|--------|
@@ -34,7 +34,7 @@ The plugin does nothing until you set a level. Send one of these as a message. T
 | `ste` | Show the active level and where it comes from |
 | `ste clear --project` | Remove the project override |
 
-In Claude Code, the same commands also work as `/ste 70`, `/ste off`, and so on.
+If the model answers `ste 70` instead of a confirmation, the hook did not run. In Codex, run `/hooks` and trust it. In Claude Code, check that the plugin is enabled and start a new session.
 
 To rewrite existing text, ask for it ("rewrite this in STE at 90%") or use the `ste-rewrite` skill.
 
