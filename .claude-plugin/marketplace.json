@@ -1,0 +1,16 @@
+{
+  "name": "ste100-marketplace",
+  "owner": {
+    "name": "toonooby"
+  },
+  "metadata": {
+    "description": "Simplified Technical English (ASD-STE100) output for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "ste100",
+      "source": "./",
+      "description": "ASD-STE100 Simplified Technical English replies with a compliance slider."
+    }
+  ]
+}

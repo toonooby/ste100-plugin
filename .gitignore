@@ -1,0 +1,3 @@
+.DS_Store
+# per-project level override written by `/ste <level> --project`
+.claude/
