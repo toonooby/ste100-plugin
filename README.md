@@ -1,48 +1,55 @@
 # ste100
 
-A Claude Code plugin that makes Claude write its replies in ASD-STE100 Simplified Technical English. A slider sets the compliance level from 10% to 100%.
+A plugin for Claude Code and Codex that makes replies follow ASD-STE100 Simplified Technical English. A slider sets how strict it is, from 10% to 100%.
 
 ## Install
 
-In Claude Code:
+### Claude Code
 
 ```
 /plugin marketplace add toonooby/ste100-plugin
 /plugin install ste100@ste100-marketplace
 ```
 
-Or from a terminal:
+Then start a new session.
+
+### Codex
 
 ```bash
-claude plugin marketplace add toonooby/ste100-plugin
-claude plugin install ste100@ste100-marketplace
+codex plugin marketplace add toonooby/ste100-plugin
+codex plugin add ste100@ste100-marketplace
 ```
 
-Then start a new session and run `/ste 70`. The plugin does nothing until you set a level.
-
-To try it without installing, clone this repo and run `claude --plugin-dir ./ste100-plugin`.
+Then start a new session and run `/hooks` to trust the ste100 hook. Codex skips plugin hooks until you trust them, and the hook is what applies the rules.
 
 ## Use
 
-| Command | Effect |
-|---------|--------|
-| `/ste 70` | Set the global level to 70% (rounded to the nearest 10) |
-| `/ste 40 --project` | Override the level for this project only |
-| `/ste off` | Turn STE off |
-| `/ste` | Show the active level and its source |
-| `/ste clear --project` | Remove the project override |
-| `/ste-rewrite 90 <text>` | Rewrite some text (or the last reply) at a level |
+The plugin does nothing until you set a level. Send one of these as a message. The hook handles it, and it does not go to the model.
 
-Precedence: `STE100_LEVEL` env var > `<project>/.claude/ste100-level` > `~/.claude/ste100/level`. The default is off.
+| Message | Effect |
+|---------|--------|
+| `ste 70` | Set the level to 70% (10-100, rounded to the nearest 10) |
+| `ste 40 --project` | Override the level for this project only |
+| `ste off` | Turn STE off |
+| `ste` | Show the active level and where it comes from |
+| `ste clear --project` | Remove the project override |
+
+In Claude Code, the same commands also work as `/ste 70`, `/ste off`, and so on.
+
+To rewrite existing text, ask for it ("rewrite this in STE at 90%") or use the `ste-rewrite` skill.
+
+The level is stored in `~/.config/ste100/level` (or `$XDG_CONFIG_HOME/ste100/level`), so Claude Code and Codex share it. Precedence: the `STE100_LEVEL` environment variable, then `<project>/.ste100-level`, then the global file.
 
 ## How it works
 
 A `UserPromptSubmit` hook (`scripts/ste-inject.sh`) adds the rules for the active level to every turn. The rules stack up: each tier adds rules to the ones below it (see `skills/ste100/SKILL.md`).
 
-**Accuracy beats compliance.** At every level, Claude must keep caveats, uncertainty, edge cases, and odd behavior, even when that breaks a rule. At 70% and above, each rule it breaks is marked with ‡ and explained in a `STE deviations:` line, so the strict levels cannot quietly flatten the facts.
+**Accuracy beats compliance.** At every level, the model must keep caveats, uncertainty, edge cases, and odd behavior, even when that breaks a rule. At 70% and above, each rule it breaks is marked with ‡ and explained in a `STE deviations:` line, so the strict levels cannot quietly flatten the facts.
 
 Code, commands, paths, identifiers, error messages, quotes, and file contents are not changed.
 
 ## Notes
 
-The percentage sets how many STE rules Claude follows. It is not a measured compliance score. The rules here paraphrase the main ASD-STE100 writing rules; the plugin does not include the official STE dictionary. The specification is free from [ASD](https://www.asd-ste100.org). This project is not affiliated with ASD.
+The percentage sets how many STE rules the model follows. It is not a measured compliance score. The rules here paraphrase the main ASD-STE100 writing rules; the plugin does not include the official STE dictionary. The specification is free from [ASD](https://www.asd-ste100.org). This project is not affiliated with ASD.
+
+Upgrading from 0.1.x: the level used to live in `~/.claude/ste100/level`. That file is still read, and it moves to the new location the next time you set a level.

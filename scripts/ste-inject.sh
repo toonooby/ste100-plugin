@@ -1,11 +1,42 @@
 #!/usr/bin/env bash
-# UserPromptSubmit hook: adds the STE100 rules for the active level to the turn.
-# Rules are cumulative: each level adds rules on top of the levels below it.
+# UserPromptSubmit hook for Claude Code and Codex.
+#
+# A prompt like "ste 70", "ste off" or "ste status --project" sets the level and
+# is blocked, so it never reaches the model. Codex has no plugin slash commands,
+# so this is how Codex users move the slider. Any other prompt gets the STE100
+# rules for the active level. Rules are cumulative: each level adds rules on top
+# of the levels below it.
 set -euo pipefail
 
-cat >/dev/null # discard the hook's JSON input
+DIR="$(cd "$(dirname "$0")" && pwd)"
+input="$(cat)"
 
-read -r LEVEL _ <<<"$("$(dirname "$0")/ste-level.sh" --resolve)"
+json_escape() {
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }'
+}
+
+# Both tools send JSON with "cwd" and "prompt". A level command never contains
+# quotes or backslashes, so plain regexes are enough to read it.
+ws='([[:space:]]|\\[nrt])*'
+if [[ -z "${CLAUDE_PROJECT_DIR:-}" && $input =~ \"cwd\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]]; then
+  export STE100_PROJECT_DIR="${BASH_REMATCH[1]}"
+fi
+
+shopt -s nocasematch
+ste_prompt="\"prompt\"[[:space:]]*:[[:space:]]*\"${ws}ste(([[:space:]]+[a-z0-9%]+)?([[:space:]]+--project)?)${ws}\""
+if [[ $input =~ $ste_prompt ]]; then
+  # Group 1 is the leading whitespace inside $ws; group 2 holds the arguments.
+  args="$(printf '%s' "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')"
+  if [[ $args =~ ^[[:space:]]*(([0-9]{1,3}%?|off|status|clear)([[:space:]]+--project)?)?[[:space:]]*$ ]]; then
+    # shellcheck disable=SC2086 # word splitting turns "70 --project" into two args
+    msg="$("$DIR/ste-level.sh" $args 2>&1)" || true
+    printf '{"decision":"block","reason":"%s"}\n' "$(json_escape "$msg")"
+    exit 0
+  fi
+fi
+shopt -u nocasematch
+
+read -r LEVEL _ <<<"$("$DIR/ste-level.sh" --resolve)"
 [[ "$LEVEL" == "0" ]] && exit 0
 
 rule() { (( LEVEL >= $1 )) && echo "- $2"; return 0; }

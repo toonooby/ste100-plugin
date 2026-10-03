@@ -9,7 +9,7 @@ ASD-STE100 is a controlled language for technical documentation. It limits vocab
 
 ## The slider
 
-The plugin maps a level from 10% to 100% onto cumulative rule tiers. The active level comes from `/ste <level>` and is injected each turn by a hook.
+The plugin maps a level from 10% to 100% onto cumulative rule tiers. The user sets the level by sending `ste <level>` as a message (or `/ste <level>` in Claude Code), and a hook adds the rules for that level to each turn.
 
 | Level | Adds |
 |-------|------|
