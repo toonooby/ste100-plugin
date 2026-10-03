@@ -6,17 +6,29 @@ A plugin for Claude Code and Codex that makes replies follow ASD-STE100 Simplifi
 
 ### Claude Code
 
+Send these two commands one at a time. If you paste both at once, Claude Code reads them as a single marketplace source and rejects it.
+
 ```
 /plugin marketplace add toonooby/ste100-plugin
+```
+
+```
 /plugin install ste100@ste100-marketplace
 ```
+
+If Claude Code opens an "Add Marketplace" box instead, enter only `toonooby/ste100-plugin`.
 
 Then start a new session.
 
 ### Codex
 
+Run these two commands in a terminal, one at a time:
+
 ```bash
 codex plugin marketplace add toonooby/ste100-plugin
+```
+
+```bash
 codex plugin add ste100@ste100-marketplace
 ```
 
