@@ -1,6 +1,6 @@
 {
   "name": "ste100",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Write replies in ASD-STE100 Simplified Technical English, with a 10-100% strictness slider and a rule that accuracy always beats compliance.",
   "author": {
     "name": "toonooby"
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "STE100",
     "shortDescription": "Replies in Simplified Technical English",
-    "longDescription": "Makes Codex write its replies in ASD-STE100 Simplified Technical English. Send \"ste 70\" (any level from 10 to 100) to set how strict it is, or \"ste off\" to stop. Caveats and odd results are kept, not smoothed over. Run /hooks once to trust the plugin's hook; Codex skips it until you do.",
+    "longDescription": "Makes Codex write its replies in ASD-STE100 Simplified Technical English. Send \"ste 70\" (any level from 10 to 100) to set how strict it is, or \"ste off\" to stop. Requires Bash and jq. Trust the hook through /hooks in Codex CLI or Hooks settings in the desktop app. Caveats and odd results are kept.",
     "developerName": "toonooby",
     "category": "Productivity",
     "websiteURL": "https://github.com/toonooby/ste100-plugin"

@@ -5,43 +5,69 @@
 # and is blocked, so it never reaches the model. Neither tool registers a plain
 # /ste command for plugins (Codex has no plugin commands; Claude Code namespaces
 # them), and both pass an unknown "/ste 70" through to this hook. Any other
-# prompt gets the STE100 rules for the active level. Rules are cumulative: each
-# level adds rules on top of the levels below it.
+# prompt gets the current STE100 mode, replacing earlier hook instructions.
+# Rules are cumulative: each level adds rules on top of the levels below it.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 input="$(cat)"
 
-json_escape() {
-  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }'
+off_context() {
+  cat <<'EOF'
+<ste100 level="0">
+Automatic STE100 styling is off. This replaces all earlier STE100 hook instructions. Do not apply their writing rules or add their STE deviations line. Follow the user's requested style. This does not cancel an explicit request to write or rewrite text in STE.
+</ste100>
+EOF
 }
 
-# Both tools send JSON with "cwd" and "prompt". A level command never contains
-# quotes or backslashes, so plain regexes are enough to read it.
-ws='([[:space:]]|\\[nrt])*'
-if [[ -z "${CLAUDE_PROJECT_DIR:-}" && $input =~ \"cwd\"[[:space:]]*:[[:space:]]*\"([^\"]*)\" ]]; then
-  export STE100_PROJECT_DIR="${BASH_REMATCH[1]}"
+if ! command -v jq >/dev/null 2>&1; then
+  off_context
+  echo '<ste100-error>The STE100 hook needs jq. Tell the user once to install jq and restart Claude Code or Codex. Automatic STE100 styling is off until jq is available.</ste100-error>'
+  exit 0
+fi
+
+# Decode the event before matching commands. JSON escapes can occur in both
+# prompts and project paths. Reject malformed events without retaining old rules.
+if ! jq -se '
+  length == 1 and (.[0] | type == "object") and
+  (.[0].prompt | type == "string") and
+  ((.[0].cwd // "") | type == "string") and
+  ((.[0].prompt | contains("\u0000")) | not) and
+  (((.[0].cwd // "") | contains("\u0000")) | not)
+' <<<"$input" >/dev/null 2>&1; then
+  off_context
+  echo '<ste100-error>The STE100 hook could not read its JSON input. No automatic STE100 rules apply to this message. Tell the user once about the hook input error.</ste100-error>'
+  exit 0
+fi
+
+# NUL delimiters preserve trailing newlines in a valid Unix directory name.
+IFS= read -r -d '' prompt < <(jq -j '.prompt, "\u0000"' <<<"$input") || true
+IFS= read -r -d '' project_dir < <(jq -j '.cwd // "", "\u0000"' <<<"$input") || true
+if [[ -z "${STE100_PROJECT_DIR:-}" && -z "${CLAUDE_PROJECT_DIR:-}" && -n "$project_dir" ]]; then
+  export STE100_PROJECT_DIR="$project_dir"
 fi
 
 shopt -s nocasematch
-ste_prompt="\"prompt\"[[:space:]]*:[[:space:]]*\"${ws}/?(ste100:)?ste(([[:space:]]+[a-z0-9%]+)?([[:space:]]+--project)?)${ws}\""
-if [[ $input =~ $ste_prompt ]]; then
-  # Group 1 is the leading whitespace inside $ws, group 2 the optional
-  # "ste100:" namespace; group 3 holds the arguments.
-  args="$(printf '%s' "${BASH_REMATCH[3]}" | tr '[:upper:]' '[:lower:]')"
-  if [[ $args =~ ^[[:space:]]*(([0-9]{1,3}%?|off|status|clear)([[:space:]]+--project)?)?[[:space:]]*$ ]]; then
-    # shellcheck disable=SC2086 # word splitting turns "70 --project" into two args
-    msg="$("$DIR/ste-level.sh" $args 2>&1)" || true
-    printf '{"decision":"block","reason":"%s"}\n' "$(json_escape "$msg")"
-    exit 0
-  fi
+ste_prompt='^[[:space:]]*/?(ste100:)?ste([[:space:]]+([0-9]{1,3}%?|off|status|clear))?([[:space:]]+(--project))?[[:space:]]*$'
+if [[ $prompt =~ $ste_prompt ]]; then
+  arg="${BASH_REMATCH[3]:-}"
+  scope="${BASH_REMATCH[5]:-}"
+  arg="$(printf '%s' "$arg" | tr '[:upper:]' '[:lower:]')"
+  [[ -n "$scope" ]] && scope=--project
+  msg="$("$DIR/ste-level.sh" "$arg" "$scope" 2>&1)" || true
+  jq -n --arg reason "$msg" '{decision: "block", reason: $reason}'
+  exit 0
 fi
 shopt -u nocasematch
 
-read -r LEVEL SOURCE <<<"$("$DIR/ste-level.sh" --resolve)"
-[[ "$LEVEL" == "0" ]] && exit 0
+read -r LEVEL _ <<<"$("$DIR/ste-level.sh" --resolve)"
+if [[ "$LEVEL" == "0" ]]; then
+  off_context
+  exit 0
+fi
 if [[ "$LEVEL" == "invalid" ]]; then
-  echo "<ste100-error>The STE100 level setting (${SOURCE}) is not valid, so no STE100 rules apply. Tell the user once that sending \"ste 70\" or \"ste off\" fixes it.</ste100-error>"
+  off_context
+  printf '<ste100-error>%s Tell the user once about the invalid setting and how to repair it.</ste100-error>\n' "$("$DIR/ste-level.sh")"
   exit 0
 fi
 
@@ -49,6 +75,7 @@ rule() { (( LEVEL >= $1 )) && echo "- $2"; return 0; }
 
 cat <<EOF
 <ste100 level="${LEVEL}">
+This replaces all earlier STE100 hook instructions. Only the rules in this block apply to automatic STE100 styling, including when this level is lower than an earlier level.
 Write your prose reply to the user in ASD-STE100 Simplified Technical English at ${LEVEL}% compliance. Apply every rule listed below; rules for higher levels are deliberately left out.
 
 Rules:

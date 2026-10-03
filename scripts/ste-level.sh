@@ -18,10 +18,18 @@ PROJECT_FILE="${PROJECT_DIR}/.ste100-level"
 normalize() {
   local raw="${1%\%}"
   case "$raw" in
-    off|OFF|0) echo 0; return ;;
+    [Oo][Ff][Ff]|0) echo 0; return ;;
   esac
   if ! [[ "$raw" =~ ^[0-9]+$ ]]; then
     echo "invalid" ; return
+  fi
+  # Strip leading zeros, then clamp before arithmetic can overflow.
+  raw="${raw#"${raw%%[!0]*}"}"
+  if [[ -z "$raw" ]]; then
+    echo 0; return
+  fi
+  if (( ${#raw} > 2 )); then
+    echo 100; return
   fi
   local n=$(( (10#$raw + 5) / 10 * 10 ))
   (( n < 10 )) && n=10
@@ -31,26 +39,50 @@ normalize() {
 
 resolve() {
   local f
+  RESOLVED_LEVEL=0
+  RESOLVED_SOURCE=default
+  RESOLVED_SCOPE=default
   if [[ -n "${STE100_LEVEL:-}" ]]; then
-    echo "$(normalize "$STE100_LEVEL") env:STE100_LEVEL"
-    return
+    RESOLVED_LEVEL="$(normalize "$STE100_LEVEL")"
+    RESOLVED_SOURCE=env:STE100_LEVEL
+    RESOLVED_SCOPE="env"
+    return 0
   fi
   for f in "$PROJECT_FILE" "$GLOBAL_FILE" "$LEGACY_GLOBAL_FILE"; do
     if [[ -f "$f" ]]; then
-      echo "$(normalize "$(tr -d '[:space:]' < "$f")") file:$f"
-      return
+      RESOLVED_LEVEL="$(normalize "$(tr -d '[:space:]' < "$f")")"
+      RESOLVED_SOURCE="file:$f"
+      RESOLVED_SCOPE=global
+      [[ "$f" == "$PROJECT_FILE" ]] && RESOLVED_SCOPE=project
+      return 0
     fi
   done
-  echo "0 default"
+  return 0
+}
+
+repair_help() {
+  case "$RESOLVED_SCOPE" in
+    env)
+      echo 'Change or unset STE100_LEVEL in the environment that starts Claude Code or Codex, then start a new session.'
+      ;;
+    project)
+      echo 'Send ste 70 --project or ste off --project to fix it, or ste clear --project to remove the project override.'
+      ;;
+    *)
+      echo 'Send ste 70 or ste off to fix it.'
+      ;;
+  esac
 }
 
 describe() {
   local level source
-  read -r level source <<<"$(resolve)"
+  resolve
+  level="$RESOLVED_LEVEL"
+  source="$RESOLVED_SOURCE"
   if [[ "$level" == "0" ]]; then
     echo "STE100: off (source: $source)"
   elif [[ "$level" == "invalid" ]]; then
-    echo "STE100: off, because the level in $source is not valid. Send ste <10-100> or ste off to fix it."
+    printf 'STE100: off, because the level in %s is not valid. %s\n' "$source" "$(repair_help)"
   else
     echo "STE100: ${level}% (source: $source)"
   fi
@@ -58,6 +90,7 @@ describe() {
 
 if [[ "${1:-}" == "--resolve" ]]; then
   resolve
+  printf '%s %s\n' "$RESOLVED_LEVEL" "$RESOLVED_SOURCE"
   exit 0
 fi
 
@@ -86,7 +119,7 @@ if [[ "$level" == "invalid" ]]; then
   exit 1
 fi
 
-mkdir -p "$(dirname "$target")"
+mkdir -p "${target%/*}"
 echo "$level" > "$target"
 # Move 0.1.x users off the old location so it cannot shadow a later `clear`.
 [[ "$target" == "$GLOBAL_FILE" ]] && rm -f "$LEGACY_GLOBAL_FILE"
@@ -95,6 +128,8 @@ if [[ "$level" == "0" ]]; then
 else
   echo "STE100 set to ${level}% ($target). Applies from your next message."
 fi
-if [[ -n "${STE100_LEVEL:-}" ]]; then
-  echo "Note: STE100_LEVEL=${STE100_LEVEL} is set in the environment and overrides this file."
+resolve
+if [[ "$RESOLVED_SOURCE" != "file:$target" ]]; then
+  printf 'Note: another setting overrides this file. '
+  describe
 fi

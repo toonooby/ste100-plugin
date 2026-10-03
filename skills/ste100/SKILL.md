@@ -13,9 +13,10 @@ The plugin maps a level from 10% to 100% onto cumulative rule tiers. The user se
 
 ### If a level message reaches you
 
-The hook normally catches `ste 70`, `/ste off`, and similar messages before they reach the model. If one reaches you, the hook did not run, so no STE rules are being applied either. Do not set the level yourself; that would hide the problem.
+The hook normally catches valid level messages such as `ste 70` and `/ste off` before they reach the model. If one reaches you, it was not intercepted. Do not set the level yourself; that would hide the problem. Check for a hook diagnostic and explain the required repair or approval.
 
-- In Codex, the usual cause is that plugin hooks stay off until the user trusts them. Tell the user to run `/hooks`, trust the ste100 hook, and send the message again.
+- First check for a hook diagnostic about a missing `jq` dependency or malformed input. Follow that diagnostic's repair instructions if it is present.
+- In Codex, plugin hooks stay off until the user trusts them. In the CLI, tell the user to run `/hooks` and trust the ste100 hook. In the desktop app, tell the user to review and trust it in Hooks settings. Then send the message again.
 - In Claude Code, the usual cause is that the plugin is disabled or the session started before it was installed. Tell the user to check `/plugin` and start a new session.
 
 | Level | Adds |
@@ -30,6 +31,8 @@ The hook normally catches `ste 70`, `/ste off`, and similar messages before they
 | 80 | Common concrete words, one meaning and one part of speech each; warnings before the step, starting with a command |
 | 90 | One instruction per sentence unless actions are simultaneous; topic sentence first in descriptive paragraphs |
 | 100 | Dictionary-approved words only, plus technical names and technical verbs of the field |
+
+The current hook block replaces all earlier automatic STE instructions. If its level is `0`, stop applying those earlier rules and their deviations footer. An explicit user request to write or rewrite in STE still applies. At a lower active level, use only the current block's tiers.
 
 ## The accuracy rule (overrides every tier)
 

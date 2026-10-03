@@ -1,3 +1,4 @@
 .DS_Store
 # per-project level override written by `ste <level> --project`
 .ste100-level
+__pycache__/
